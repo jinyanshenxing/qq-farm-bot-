@@ -56,8 +56,8 @@ jobs:
         with:
           # 镜像名称（替换为你的GitHub用户名/项目名）
           images: |
-            ghcr.io/jinyanshenxing/qq-farm-bot- # GitHub Packages
-            # jinyanshenxing/qq-farm-bot-       # Docker Hub（需启用上方Docker Hub登录）
+            ghcr.io/jinyanshenxing/qq-farm-bot-kami # GitHub Packages
+            # jinyanshenxing/qq-farm-bot-kami      # Docker Hub（需启用上方Docker Hub登录）
           # 标签规则：主分支为latest，标签为对应版本，提交哈希为短标识
           tags: |
             type=ref,event=branch

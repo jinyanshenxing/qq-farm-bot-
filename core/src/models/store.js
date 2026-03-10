@@ -8,7 +8,7 @@ const { readTextFile, readJsonFile, writeJsonFileAtomic } = require('../services
 
 const STORE_FILE = getDataFile('store.json');
 const ACCOUNTS_FILE = getDataFile('accounts.json');
-const ALLOWED_PLANTING_STRATEGIES = ['preferred', 'level', 'max_exp', 'max_fert_exp', 'max_profit', 'max_fert_profit'];
+const ALLOWED_PLANTING_STRATEGIES = ['preferred', 'level', 'max_exp', 'max_fert_exp', 'max_profit', 'max_fert_profit', 'task'];
 const PUSHOO_CHANNELS = new Set([
     'webhook', 'qmsg', 'serverchan', 'pushplus', 'pushplushxtrip',
     'dingtalk', 'wecom', 'bark', 'gocqhttp', 'onebot', 'atri',
@@ -34,8 +34,8 @@ const DEFAULT_ACCOUNT_CONFIG = {
         friend_steal: false,
         friend_help: false,
         friend_bad: false,
-        task: false,
         task_plant: false,
+        task_plant_first_harvest_radish: false,
         fertilizer_gift: false,
         fertilizer_buy: false,
         sell: false,

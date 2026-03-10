@@ -7,7 +7,8 @@ export interface AutomationConfig {
   farm_push?: boolean
   land_upgrade?: boolean
   friend?: boolean
-  task?: boolean
+  task_plant?: boolean
+  task_plant_first_harvest_radish?: boolean
   sell?: boolean
   fertilizer?: string
   friend_steal?: boolean

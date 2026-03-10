@@ -650,6 +650,24 @@ function startAdminServer(dataProvider) {
         }
     });
 
+    // API: 访客记录
+    app.get('/api/interact-records', async (req, res) => {
+        const id = getAccId(req);
+        if (!id) return res.status(400).json({ ok: false, error: 'Missing x-account-id' });
+
+        // 检查权限
+        if (!checkAccountAccess(req, id)) {
+            return res.status(403).json({ ok: false, error: '无权访问此账号' });
+        }
+
+        try {
+            const data = await provider.getInteractRecords(id);
+            res.json({ ok: true, data });
+        } catch (e) {
+            handleApiError(res, e);
+        }
+    });
+
     // API: 好友农田详情
     app.get('/api/friend/:gid/lands', async (req, res) => {
         const id = getAccId(req);
@@ -787,6 +805,33 @@ function startAdminServer(dataProvider) {
                 if (store.setPlantBlacklist) {
                     store.setPlantBlacklist(accountId, next);
                 }
+            }
+
+            if (provider && typeof provider.broadcastConfig === 'function') {
+                provider.broadcastConfig(accountId);
+            }
+
+            const saved = store.getPlantBlacklist ? store.getPlantBlacklist(accountId) : [];
+            res.json({ ok: true, data: saved });
+        } catch (e) {
+            handleApiError(res, e);
+        }
+    });
+
+    app.put('/api/plant-blacklist', authRequired, (req, res) => {
+        try {
+            const accountId = getAccId(req);
+            if (!accountId) return res.status(400).json({ ok: false, error: 'Missing accountId' });
+
+            // 检查权限
+            if (!checkAccountAccess(req, accountId)) {
+                return res.status(403).json({ ok: false, error: '无权访问此账号' });
+            }
+
+            const seedIds = Array.isArray((req.body || {}).seedIds) ? req.body.seedIds.map(Number).filter(n => Number.isFinite(n) && n > 0) : [];
+
+            if (store.setPlantBlacklist) {
+                store.setPlantBlacklist(accountId, seedIds);
             }
 
             if (provider && typeof provider.broadcastConfig === 'function') {

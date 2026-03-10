@@ -19,6 +19,7 @@ const sortKey = ref('exp')
 const imageErrors = ref<Record<string | number, boolean>>({})
 const showBlacklistModal = ref(false)
 const searchKeyword = ref('')
+const batchLoading = ref(false)
 
 const filteredList = computed(() => {
   const keyword = searchKeyword.value.trim().toLowerCase()
@@ -98,6 +99,33 @@ async function handleToggleBlacklist(item: any) {
   }
 }
 
+async function handleAddAllToBlacklist() {
+  if (batchLoading.value)
+    return
+  batchLoading.value = true
+  try {
+    const allSeedIds = list.value.map((item: any) => item.seedId)
+    await plantBlacklistStore.addAllToBlacklist(allSeedIds)
+    toast.success(`已将 ${allSeedIds.length} 种作物加入偷菜黑名单`)
+  }
+  finally {
+    batchLoading.value = false
+  }
+}
+
+async function handleClearBlacklist() {
+  if (batchLoading.value)
+    return
+  batchLoading.value = true
+  try {
+    await plantBlacklistStore.clearBlacklist()
+    toast.success('已清空偷菜黑名单')
+  }
+  finally {
+    batchLoading.value = false
+  }
+}
+
 onMounted(() => {
   loadAnalytics()
   plantBlacklistStore.fetchBlacklist()
@@ -151,6 +179,15 @@ function formatGrowTime(seconds: any) {
         >
           <div class="i-carbon-list-blocked" />
           偷菜黑名单 ({{ blacklist.length }})
+        </button>
+        <button
+          class="flex items-center gap-1 rounded-lg bg-orange-50 px-3 py-2 text-sm text-orange-600 transition dark:bg-orange-900/20 hover:bg-orange-100 dark:text-orange-400 disabled:opacity-50 dark:hover:bg-orange-900/30"
+          :disabled="batchLoading || list.length === 0"
+          @click="handleAddAllToBlacklist"
+        >
+          <div v-if="batchLoading" class="i-svg-spinners-90-ring-with-bg" />
+          <div v-else class="i-carbon-add-all" />
+          一键全部加入黑名单
         </button>
         <div class="relative">
           <div class="i-carbon-search absolute left-3 top-1/2 text-gray-400 -translate-y-1/2" />
@@ -393,7 +430,16 @@ function formatGrowTime(seconds: any) {
             </button>
           </div>
         </div>
-        <div class="mt-4 flex justify-end">
+        <div class="mt-4 flex justify-between">
+          <button
+            v-if="blacklist.length > 0"
+            class="rounded-lg bg-red-100 px-4 py-2 text-sm text-red-600 dark:bg-red-900/30 hover:bg-red-200 dark:text-red-400 dark:hover:bg-red-900/50"
+            :disabled="batchLoading"
+            @click="handleClearBlacklist"
+          >
+            清空黑名单
+          </button>
+          <div v-else />
           <button
             class="rounded-lg bg-gray-100 px-4 py-2 text-sm text-gray-700 dark:bg-gray-700 hover:bg-gray-200 dark:text-gray-300 dark:hover:bg-gray-600"
             @click="showBlacklistModal = false"

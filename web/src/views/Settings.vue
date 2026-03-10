@@ -60,8 +60,8 @@ const localSettings = ref({
   friendQuietHours: { enabled: false, start: '23:00', end: '07:00' },
   automation: {
     farm: false,
-    task: false,
     task_plant: false,
+    task_plant_first_harvest_radish: false,
     sell: false,
     friend: false,
     farm_push: false,
@@ -83,8 +83,8 @@ const automationMasterSwitch = ref(false)
 
 const automationBooleanKeys = [
   'farm',
-  'task',
   'task_plant',
+  'task_plant_first_harvest_radish',
   'sell',
   'friend',
   'farm_push',
@@ -143,8 +143,8 @@ function syncLocalSettings() {
     if (!localSettings.value.automation) {
       localSettings.value.automation = {
         farm: false,
-        task: false,
         task_plant: false,
+        task_plant_first_harvest_radish: false,
         sell: false,
         friend: false,
         farm_push: false,
@@ -164,8 +164,8 @@ function syncLocalSettings() {
     else {
       const defaults = {
         farm: false,
-        task: false,
         task_plant: false,
+        task_plant_first_harvest_radish: false,
         sell: false,
         friend: false,
         farm_push: false,
@@ -275,6 +275,7 @@ const plantingStrategyOptions = [
   { label: '最大普通肥经验/时', value: 'max_fert_exp' },
   { label: '最大净利润/时', value: 'max_profit' },
   { label: '最大普通肥净利润/时', value: 'max_fert_profit' },
+  { label: '任务种植', value: 'task' },
 ]
 
 const channelOptions = [
@@ -376,8 +377,8 @@ watchEffect(async () => {
     return
   }
   if (strategy === 'level') {
-    const best = [...available].sort((a, b) => b.requiredLevel - a.requiredLevel)[0]
-    strategyPreviewLabel.value = best ? `${best.requiredLevel}级 ${best.name}` : null
+    const best = [...available].sort((a, b) => (b.requiredLevel ?? 0) - (a.requiredLevel ?? 0))[0]
+    strategyPreviewLabel.value = best ? `${best.requiredLevel ?? 0}级 ${best.name}` : null
     return
   }
   const sortBy = analyticsSortByMap[strategy]
@@ -638,8 +639,8 @@ async function handleTestOffline() {
 
           <div class="grid grid-cols-2 gap-3 md:grid-cols-3">
             <BaseSwitch v-model="localSettings.automation.farm" label="自动种植收获" />
-            <BaseSwitch v-model="localSettings.automation.task" label="自动做任务" />
-            <BaseSwitch v-model="localSettings.automation.task_plant" label="按照任务种值" />
+            <BaseSwitch v-model="localSettings.automation.task_plant" label="按照任务种植" />
+            <BaseSwitch v-model="localSettings.automation.task_plant_first_harvest_radish" label="每日萝卜600经验" />
             <BaseSwitch v-model="localSettings.automation.sell" label="自动卖果实" />
             <BaseSwitch v-model="localSettings.automation.friend" label="自动好友互动" />
             <BaseSwitch v-model="localSettings.automation.farm_push" label="推送触发巡田" />
@@ -862,7 +863,7 @@ async function handleTestOffline() {
             />
           </div>
 
-          <div class="border-t pt-3 mt-3 space-y-3 dark:border-gray-700">
+          <div class="mt-3 border-t pt-3 space-y-3 dark:border-gray-700">
             <h4 class="text-sm text-gray-700 font-medium dark:text-gray-300">
               微信配置（关闭微信配置标签时生效）
             </h4>

@@ -15,6 +15,7 @@ export interface AutomationConfig {
   event_plant?: boolean
   sell?: boolean
   fertilizer?: string
+  clear_own_weed_bug?: boolean
   friend_steal?: boolean
   friend_help?: boolean
   friend_bad?: boolean
@@ -78,6 +79,7 @@ export interface SettingsState {
   automation: AutomationConfig
   ui: UIConfig
   offlineReminder: OfflineConfig
+  automationSyncEnabled: boolean
   stealDelaySeconds: number
   plantOrderRandom: boolean
   plantDelaySeconds: number
@@ -104,6 +106,7 @@ export const useSettingStore = defineStore('setting', () => {
       title: '账号下线提醒',
       msg: '账号下线',
     },
+    automationSyncEnabled: false,
     stealDelaySeconds: 0,
     plantOrderRandom: false,
     plantDelaySeconds: 0,
@@ -142,6 +145,7 @@ export const useSettingStore = defineStore('setting', () => {
         title: '账号下线提醒',
         msg: '账号下线',
       }
+      settings.value.automationSyncEnabled = d.automationSyncEnabled ?? false
       settings.value.stealDelaySeconds = d.stealDelaySeconds ?? 0
       settings.value.plantOrderRandom = d.plantOrderRandom ?? false
       settings.value.plantDelaySeconds = d.plantDelaySeconds ?? 0
@@ -287,5 +291,21 @@ export const useSettingStore = defineStore('setting', () => {
     }
   }
 
-  return { settings, loading, fetchSettings, saveSettings, saveStrategySettings, saveAutomationSettings, saveOfflineConfig }
+  async function setAutomationSyncEnabled(accountId: string, enabled: boolean) {
+    if (!accountId)
+      return { ok: false, error: '未选择账号' }
+    try {
+      const { data } = await api.post('/api/user/automation-sync', { enabled, sourceAccountId: accountId }, {
+        headers: { 'x-account-id': accountId },
+      })
+      unwrapOk<any>(data as ApiResult<any>, '保存失败')
+      settings.value.automationSyncEnabled = enabled
+      return { ok: true }
+    }
+    catch (e) {
+      return { ok: false, error: getErrorMessage(e, '保存失败') }
+    }
+  }
+
+  return { settings, loading, fetchSettings, saveSettings, saveStrategySettings, saveAutomationSettings, saveOfflineConfig, setAutomationSyncEnabled }
 })

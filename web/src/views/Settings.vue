@@ -84,7 +84,7 @@ const localSettings = ref({
     fertilizerBuyType: 'organic',
     fertilizeLandLevel: 1,
     fertilizer_multi_season: false,
-    skip_own_weed_bug: false,
+    clear_own_weed_bug: true,
     // 秒收取和蹲守偷菜
     fast_harvest: false,
     stakeout_steal: false,
@@ -108,8 +108,6 @@ const localSettings = ref({
   stakeoutFriendList: [] as number[],
 })
 
-const automationMasterSwitch = ref(false)
-
 const automationBooleanKeys = [
   'farm',
   'task_plant',
@@ -125,16 +123,41 @@ const automationBooleanKeys = [
   'friend_help_exp_limit',
   'fertilizer_gift',
   'fertilizer_buy',
-  'skip_own_weed_bug',
+  'clear_own_weed_bug',
   // 秒收取和蹲守偷菜
   'fast_harvest',
   'stakeout_steal',
 ] as const
 
-watch(automationMasterSwitch, (newVal) => {
-  for (const key of automationBooleanKeys) {
-    localSettings.value.automation[key] = newVal
-  }
+const automationMasterSwitch = computed({
+  get() {
+    return automationBooleanKeys.every(key => localSettings.value.automation[key] === true)
+  },
+  set(newVal: boolean) {
+    for (const key of automationBooleanKeys) {
+      localSettings.value.automation[key] = newVal
+    }
+  },
+})
+
+const automationSyncSwitch = computed({
+  get() {
+    return !!settings.value.automationSyncEnabled
+  },
+  async set(newVal: boolean) {
+    if (!currentAccountId.value)
+      return
+    const prev = !!settings.value.automationSyncEnabled
+    settings.value.automationSyncEnabled = newVal
+    const res = await settingStore.setAutomationSyncEnabled(currentAccountId.value, newVal)
+    if (!res.ok) {
+      settings.value.automationSyncEnabled = prev
+      showAlert(`保存失败: ${res.error}`, 'danger')
+      return
+    }
+    showAlert(newVal ? '自动控制同步已开启' : '自动控制同步已关闭')
+    await loadData()
+  },
 })
 
 const localOffline = ref({
@@ -190,7 +213,7 @@ function syncLocalSettings() {
         fertilizerBuyType: 'organic',
         fertilizeLandLevel: 1,
         fertilizer_multi_season: false,
-        skip_own_weed_bug: false,
+        clear_own_weed_bug: true,
         fast_harvest: false,
         stakeout_steal: false,
         use_visitor_gids: false,
@@ -222,7 +245,7 @@ function syncLocalSettings() {
         fertilizerBuyType: 'organic',
         fertilizeLandLevel: 1,
         fertilizer_multi_season: false,
-        skip_own_weed_bug: false,
+        clear_own_weed_bug: true,
         fast_harvest: false,
         stakeout_steal: false,
         use_visitor_gids: false,
@@ -238,10 +261,6 @@ function syncLocalSettings() {
         ...localSettings.value.automation,
       }
     }
-
-    automationMasterSwitch.value = automationBooleanKeys.every(
-      key => localSettings.value.automation[key] === true,
-    )
 
     if (settings.value.offlineReminder) {
       localOffline.value = JSON.parse(JSON.stringify(settings.value.offlineReminder))
@@ -292,7 +311,6 @@ const plantingStrategyOptions = [
   { label: '最大普通肥经验/时', value: 'max_fert_exp' },
   { label: '最大净利润/时', value: 'max_profit' },
   { label: '最大普通肥净利润/时', value: 'max_fert_profit' },
-  { label: '任务种植', value: 'task' },
 ]
 
 const channelOptions = [
@@ -535,32 +553,32 @@ async function handleTestOffline() {
 </script>
 
 <template>
-  <div class="settings-page h-full flex flex-col p-4">
+  <div class="space-y-4">
     <div v-if="loading" class="py-4 text-center text-gray-500">
       <div class="i-svg-spinners-ring-resize mx-auto mb-2 text-2xl" />
       <p>加载中...</p>
     </div>
 
-    <div v-else class="h-full flex flex-col">
+    <div v-else class="space-y-4">
       <!-- 标签页导航 -->
-      <div class="mb-4 flex gap-2 overflow-x-auto pb-1">
+      <div class="flex gap-2 overflow-x-auto border-b border-gray-200 dark:border-gray-700">
         <button
-          class="shrink-0 rounded-lg px-4 py-2 font-medium transition-colors"
+          class="shrink-0 border-b-2 px-4 py-2 text-sm font-medium transition-colors"
           :class="activeTab === 'account'
-            ? 'bg-blue-500 text-white shadow-md'
-            : 'bg-white text-gray-600 hover:bg-gray-100 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700'"
+            ? 'border-blue-500 text-blue-600 dark:border-blue-400 dark:text-blue-400'
+            : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'"
           @click="activeTab = 'account'"
         >
           <div class="flex items-center space-x-2">
             <div class="i-carbon-user-multiple text-lg" />
-            <span>账号管理</span>
+            <span>账号</span>
           </div>
         </button>
         <button
-          class="rounded-lg px-4 py-2 font-medium transition-colors"
+          class="shrink-0 border-b-2 px-4 py-2 text-sm font-medium transition-colors"
           :class="activeTab === 'user'
-            ? 'bg-blue-500 text-white shadow-md'
-            : 'bg-white text-gray-600 hover:bg-gray-100 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700'"
+            ? 'border-blue-500 text-blue-600 dark:border-blue-400 dark:text-blue-400'
+            : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'"
           @click="activeTab = 'user'"
         >
           <div class="flex items-center space-x-2">
@@ -569,10 +587,10 @@ async function handleTestOffline() {
           </div>
         </button>
         <button
-          class="rounded-lg px-4 py-2 font-medium transition-colors"
+          class="shrink-0 border-b-2 px-4 py-2 text-sm font-medium transition-colors"
           :class="activeTab === 'strategy'
-            ? 'bg-blue-500 text-white shadow-md'
-            : 'bg-white text-gray-600 hover:bg-gray-100 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700'"
+            ? 'border-blue-500 text-blue-600 dark:border-blue-400 dark:text-blue-400'
+            : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'"
           @click="activeTab = 'strategy'"
         >
           <div class="flex items-center space-x-2">
@@ -581,10 +599,10 @@ async function handleTestOffline() {
           </div>
         </button>
         <button
-          class="rounded-lg px-4 py-2 font-medium transition-colors"
+          class="shrink-0 border-b-2 px-4 py-2 text-sm font-medium transition-colors"
           :class="activeTab === 'automation'
-            ? 'bg-blue-500 text-white shadow-md'
-            : 'bg-white text-gray-600 hover:bg-gray-100 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700'"
+            ? 'border-blue-500 text-blue-600 dark:border-blue-400 dark:text-blue-400'
+            : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'"
           @click="activeTab = 'automation'"
         >
           <div class="flex items-center space-x-2">
@@ -594,7 +612,7 @@ async function handleTestOffline() {
         </button>
       </div>
 
-      <div class="flex-1 overflow-hidden overflow-y-auto">
+      <div>
         <div v-if="activeTab === 'account'" class="card h-full flex flex-col rounded-lg bg-white shadow dark:bg-gray-800">
           <AccountsView />
         </div>
@@ -885,6 +903,10 @@ async function handleTestOffline() {
               <BaseSwitch v-model="automationMasterSwitch" label="总控开关" />
               <span class="text-xs text-gray-500 dark:text-gray-400">开启后自动打开所有自动控制开关</span>
             </div>
+            <div class="flex items-center gap-4 rounded-lg bg-blue-50 p-3 dark:bg-blue-900/20">
+              <BaseSwitch v-model="automationSyncSwitch" label="同步到所有账号" />
+              <span class="text-xs text-gray-500 dark:text-gray-400">开启后，此用户所有账号共用同一套自动控制设置</span>
+            </div>
 
             <div class="grid grid-cols-2 gap-3 md:grid-cols-3">
               <BaseSwitch v-model="localSettings.automation.farm" label="自动种植收获" />
@@ -897,7 +919,7 @@ async function handleTestOffline() {
               <BaseSwitch v-model="localSettings.automation.land_upgrade" label="自动升级土地" />
               <BaseSwitch v-model="localSettings.automation.fertilizer_gift" label="自动填充化肥" />
               <BaseSwitch v-model="localSettings.automation.fertilizer_buy" label="自动购买化肥" />
-              <BaseSwitch v-model="localSettings.automation.skip_own_weed_bug" label="不除自己草虫" />
+              <BaseSwitch v-model="localSettings.automation.clear_own_weed_bug" label="除自己草虫" />
             </div>
 
             <div v-if="localSettings.automation.friend" class="flex flex-wrap gap-4 rounded bg-blue-50 p-2 text-sm dark:bg-blue-900/20">

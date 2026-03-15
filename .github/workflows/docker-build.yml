@@ -7,6 +7,10 @@ on:
     tags: [ 'v*' ]
   workflow_dispatch: # 手动触发
 
+# 全局环境变量：强制使用Node.js 24运行Action（解决警告核心）
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 # 必要权限（推送镜像到GitHub Packages）
 permissions:
   contents: read

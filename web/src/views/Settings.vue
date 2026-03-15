@@ -175,6 +175,18 @@ const passwordForm = ref({
   confirm: '',
 })
 
+// 运行时连接配置
+const runtimeConfigSaving = ref(false)
+const localRuntimeConfig = ref({
+  serverUrl: 'wss://gate-obt.nqf.qq.com/prod/ws',
+  clientVersion: '1.7.0.6_20260313',
+  os: 'iOS',
+  osVersion: 'iOS 26.2.1',
+  networkType: 'wifi',
+  memory: '7672',
+  deviceId: 'iPhone X<iPhone18,3>',
+})
+
 function syncLocalSettings() {
   if (settings.value) {
     localSettings.value = JSON.parse(JSON.stringify({
@@ -273,6 +285,20 @@ async function loadData() {
     await settingStore.fetchSettings(currentAccountId.value)
     syncLocalSettings()
     await farmStore.fetchSeeds(currentAccountId.value)
+  }
+  // 加载运行时连接配置
+  await loadRuntimeConfig()
+}
+
+async function loadRuntimeConfig() {
+  try {
+    const { data } = await api.get('/api/settings/runtime-config')
+    if (data.ok && data.data) {
+      localRuntimeConfig.value = { ...localRuntimeConfig.value, ...data.data }
+    }
+  }
+  catch (e) {
+    console.error('加载运行时配置失败:', e)
   }
 }
 
@@ -536,6 +562,37 @@ async function handleSaveOffline() {
   }
 }
 
+async function handleSaveRuntimeConfig() {
+  runtimeConfigSaving.value = true
+  try {
+    const res = await settingStore.saveRuntimeConfig(localRuntimeConfig.value)
+
+    if (res.ok) {
+      showAlert('运行时连接配置已保存，运行中的账号会自动重连以生效。')
+    }
+    else {
+      showAlert(`保存失败: ${res.error || '未知错误'}`, 'danger')
+    }
+  }
+  finally {
+    runtimeConfigSaving.value = false
+  }
+}
+
+async function copyToken() {
+  if (!userStore.token) {
+    showAlert('请先登录', 'danger')
+    return
+  }
+  try {
+    await navigator.clipboard.writeText(userStore.token)
+    showAlert('Token 已复制到剪贴板')
+  }
+  catch (e) {
+    showAlert('复制失败，请手动复制', 'danger')
+  }
+}
+
 async function handleTestOffline() {
   offlineTesting.value = true
   try {
@@ -657,6 +714,123 @@ async function handleTestOffline() {
               >
                 修改用户密码
               </BaseButton>
+            </div>
+          </div>
+
+          <!-- 运行时连接配置 -->
+          <div class="border-b border-t bg-gray-50/50 px-4 py-3 dark:border-gray-700 dark:bg-gray-800/50">
+            <h3 class="flex items-center gap-2 text-base text-gray-900 font-bold dark:text-gray-100">
+              <div class="i-carbon-wifi" />
+              运行时连接配置
+            </h3>
+          </div>
+
+          <div class="p-4 space-y-3">
+            <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
+              <BaseInput
+                v-model="localRuntimeConfig.serverUrl"
+                label="服务器 WS 地址"
+                type="text"
+                placeholder="wss://gate-obt.nqf.qq.com/prod/ws"
+              />
+              <BaseInput
+                v-model="localRuntimeConfig.clientVersion"
+                label="游戏版本号"
+                type="text"
+                placeholder="1.7.0.6_20260313"
+              />
+            </div>
+
+            <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
+              <BaseSelect
+                v-model="localRuntimeConfig.os"
+                label="系统 (os)"
+                :options="[
+                  { label: 'iOS', value: 'iOS' },
+                  { label: 'Android', value: 'Android' },
+                ]"
+              />
+              <BaseInput
+                v-model="localRuntimeConfig.osVersion"
+                label="系统版本号"
+                type="text"
+                placeholder="iOS 26.2.1"
+              />
+            </div>
+
+            <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
+              <BaseInput
+                v-model="localRuntimeConfig.memory"
+                label="内存大小（单位MB）"
+                type="text"
+                placeholder="7672"
+              />
+              <BaseInput
+                v-model="localRuntimeConfig.networkType"
+                label="网络类型"
+                type="text"
+                placeholder="wifi"
+              />
+            </div>
+
+            <BaseInput
+              v-model="localRuntimeConfig.deviceId"
+              label="设备ID"
+              type="text"
+              placeholder="iPhone X<iPhone18,3>"
+            />
+
+            <p class="text-xs text-gray-500 dark:text-gray-400">
+              保存后，运行中的账号会自动重连以生效。
+            </p>
+
+            <div class="flex items-center justify-end pt-1">
+              <BaseButton
+                variant="primary"
+                size="sm"
+                :loading="runtimeConfigSaving"
+                @click="handleSaveRuntimeConfig"
+              >
+                保存运行时连接配置
+              </BaseButton>
+            </div>
+          </div>
+
+          <!-- 请求参数信息 -->
+          <div class="border-b border-t bg-gray-50/50 px-4 py-3 dark:border-gray-700 dark:bg-gray-800/50">
+            <h3 class="flex items-center gap-2 text-base text-gray-900 font-bold dark:text-gray-100">
+              <div class="i-carbon-code" />
+              请求参数信息
+            </h3>
+          </div>
+
+          <div class="p-4 space-y-3">
+            <div class="flex flex-col gap-2">
+              <div class="flex items-center gap-2">
+                <div class="flex-1">
+                  <BaseInput
+                    :model-value="userStore.token"
+                    label="x-admin-token"
+                    type="text"
+                    readonly
+                    placeholder="请先登录"
+                  />
+                </div>
+                <div class="pt-5">
+                  <BaseButton
+                    variant="secondary"
+                    size="sm"
+                    :disabled="!userStore.token"
+                    @click="copyToken"
+                  >
+                    <div class="i-carbon-copy mr-1" />
+                    复制
+                  </BaseButton>
+                </div>
+              </div>
+              <p class="text-xs text-gray-500 dark:text-gray-400">
+                x-admin-token 用于API请求认证，复制后可用于第三方工具调用接口。
+              </p>
             </div>
           </div>
 

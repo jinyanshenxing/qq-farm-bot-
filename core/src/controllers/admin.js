@@ -1469,6 +1469,72 @@ function startAdminServer(dataProvider) {
         }
     });
 
+    // API: 获取运行时连接配置
+    app.get('/api/settings/runtime-config', authRequired, async (req, res) => {
+        try {
+            const currentUser = req.currentUser;
+            if (!currentUser) {
+                return res.status(401).json({ ok: false, error: '未登录' });
+            }
+
+            // 从用户配置中读取运行时连接配置
+            const runtimeConfig = store.getRuntimeConfig
+                ? store.getRuntimeConfig(currentUser.username)
+                : {
+                    serverUrl: 'wss://gate-obt.nqf.qq.com/prod/ws',
+                    clientVersion: '1.7.0.6_20260313',
+                    os: 'iOS',
+                    osVersion: 'iOS 26.2.1',
+                    networkType: 'wifi',
+                    memory: '7672',
+                    deviceId: 'iPhone X<iPhone18,3>',
+                };
+
+            res.json({ ok: true, data: runtimeConfig });
+        } catch (e) {
+            res.status(500).json({ ok: false, error: e.message });
+        }
+    });
+
+    // API: 保存运行时连接配置
+    app.post('/api/settings/runtime-config', authRequired, async (req, res) => {
+        try {
+            const body = (req.body && typeof req.body === 'object') ? req.body : {};
+            const currentUser = req.currentUser;
+
+            if (!currentUser) {
+                return res.status(401).json({ ok: false, error: '未登录' });
+            }
+
+            // 验证必填字段
+            const requiredFields = ['serverUrl', 'clientVersion', 'os'];
+            for (const field of requiredFields) {
+                if (!body[field]) {
+                    return res.status(400).json({ ok: false, error: `缺少必填字段: ${field}` });
+                }
+            }
+
+            const config = {
+                serverUrl: String(body.serverUrl || '').trim(),
+                clientVersion: String(body.clientVersion || '').trim(),
+                os: String(body.os || '').trim(),
+                osVersion: String(body.osVersion || '').trim(),
+                networkType: String(body.networkType || '').trim(),
+                memory: String(body.memory || '').trim(),
+                deviceId: String(body.deviceId || '').trim(),
+            };
+
+            // 保存到用户配置中
+            const data = store.setRuntimeConfig
+                ? store.setRuntimeConfig(config, currentUser.username)
+                : config;
+
+            res.json({ ok: true, data: data || {} });
+        } catch (e) {
+            res.status(500).json({ ok: false, error: e.message });
+        }
+    });
+
     // API: 获取配置
     app.get('/api/settings', async (req, res) => {
         try {
